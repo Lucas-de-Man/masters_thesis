@@ -1,6 +1,11 @@
 import torch
 
 class NewtonsMethod:
+    """
+        Class that holds a set of points and a surrogate.
+        It's able to aply newton's method to those points on the surrogate.
+        The surrogate just needs to be a differentiable function taking and returning torch tensors.
+    """
     def __init__(self, surrogate, points = None):
         self.surrogate = surrogate
         self.points = torch.empty(0) if points is None else points

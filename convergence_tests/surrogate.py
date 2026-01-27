@@ -5,7 +5,7 @@ from botorch.models.transforms.input import Normalize
 class Surrogate:
     """
         Simple container class for a SingleTaskGP.
-        We just needit to interpolate over a set number of points, with the abilaty to choose a lenghtscale
+        We just needit to interpolate over a set number of points, with the abilaty to choose a lenghtscale.
     """
     def __init__(self, x_points, y_points, set_ls=None, normalize_inputs=False):
         normilisation = Normalize(d=x_points.shape[-1]) if normalize_inputs else None
