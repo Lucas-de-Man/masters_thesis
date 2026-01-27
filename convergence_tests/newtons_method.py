@@ -8,7 +8,7 @@ class NewtonsMethod:
     """
     def __init__(self, surrogate, points = None):
         self.surrogate = surrogate
-        self.points = torch.empty(0) if points is None else points
+        self.points = torch.empty(0) if points is None else points.detach().clone()
         # also store the initial points
         self.history = [self.points.detach().clone().requires_grad_(False)]
     
@@ -29,3 +29,7 @@ class NewtonsMethod:
         self.points = self.points - torch.mul(torch.div(1, n * y_grad), y)
         # save a copy of the new set of points
         self.history.append(self.points.detach().clone().requires_grad_(False))
+    
+    def take_n_steps(self, n):
+        for _ in range(n):
+            self.step()
