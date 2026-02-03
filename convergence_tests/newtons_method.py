@@ -41,9 +41,9 @@ class NewtonsMethod:
         # get y values and gradients at all points
         y, y_grad = self.val_gradient_at(self.points)
         # Find the sign of all gradient values
-        sign_mask = torch.sign(y_grad)
-        # make sure all values are positive when adding epsilon, and restore the sign after
-        y_grad = (sign_mask * y_grad + self.epsilon) * sign_mask
+        sign_mask = ((y_grad > 0) * 2 - 1).type(y_grad.dtype)
+        # set the sign of epsilon to match the value it is added to
+        y_grad = y_grad + self.epsilon * sign_mask
         # n is dimensionality of the inputs
         n = self.points.shape[1]
         # multi dimensional newtons method using the moore penrose inverse of the gradient
