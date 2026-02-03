@@ -14,5 +14,9 @@ class Surrogate:
         if set_ls is not None:
             self.gp_model.covar_module._set_lengthscale(set_ls)
     
+    def mean_and_std(self, x):
+        posterior = self.gp_model.posterior(x)
+        return posterior.mean, posterior.std
+
     def __call__(self, x):
         return self.gp_model.posterior(x).mean
