@@ -13,6 +13,10 @@ class Surrogate:
         self.gp_model = SingleTaskGP(x_points, y_points, y_var, input_transform=normilisation)
         if set_ls is not None:
             self.gp_model.covar_module._set_lengthscale(set_ls)
+    
+    def mean_and_std(self, x):
+        posterior = self.gp_model.posterior(x)
+        return posterior.mean, posterior.variance
 
     def __call__(self, x):
         return self.gp_model.posterior(x).mean
