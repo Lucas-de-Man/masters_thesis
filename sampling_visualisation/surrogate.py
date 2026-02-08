@@ -6,7 +6,7 @@ from botorch.models.transforms.input import Normalize
 
 class Surrogate:
     """
-
+        Surrogate class holding GPRs for an objective function and any number of constraints.
     """
     # expect y_points to be n x (1 + n_constraints)
     def __init__(self, x_points, y_points, normalize_inputs=False):
@@ -47,9 +47,3 @@ class Surrogate:
 
     def __call__(self, x):
         return self.model.posterior(x).mean
-
-x, y = torch.tensor([[0.], [1.]], dtype=torch.double), torch.tensor([[0., 0.], [1., 0.1]], dtype=torch.double)
-test = Surrogate(x, y)
-add_x, add_y = torch.tensor([[0.2], [0.8]], dtype=torch.double), torch.tensor([[0.2, 0.1], [0.8, 0.5]], dtype=torch.double)
-test.add_observations(add_x, add_y)
-print(test(torch.tensor([[0.2]], dtype=torch.double)))
