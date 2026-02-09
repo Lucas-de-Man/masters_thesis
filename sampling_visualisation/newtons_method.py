@@ -6,8 +6,8 @@ class NewtonsMethod:
         It's able to aply newton's method to those points on the surrogate.
         The surrogate just needs to be a differentiable function taking and returning torch tensors.
     """
-    def __init__(self, surrogate, points = None, epsilon=1e-9):
-        self.surrogate, self.epsilon = surrogate, epsilon
+    def __init__(self, surrogate, points = None, epsilon=1e-9, lim=(0, 1)):
+        self.surrogate, self.epsilon, self.lim = surrogate, epsilon, lim
         self.points = torch.empty((0, 1)) if points is None else points.detach().clone()
 
     def val_gradient_at(self, x):
@@ -55,3 +55,19 @@ class NewtonsMethod:
         # divide by |grad|, so we assume both the mean and variance to remain constant when computing the noise magnitude
         magnitude = stds * torch.sqrt(variances) / (self.epsilon + torch.sqrt(torch.sum(grad ** 2, dim=1, keepdim=True)))
         return grad * magnitude
+    
+    def get_edge_points(self, increment=0.01):
+        # remove points wiht a nan value
+        numaric_points = self.points[~torch.any(self.points.isnan(), dim=1)]
+        # select points that are inside the legal hypercube
+        valid_points = numaric_points[~torch.any(torch.logical_or(numaric_points < self.lim[0], numaric_points > self.lim[1]), dim=1)]
+        # distance from 0
+        values = self.surrogate(valid_points) ** 2
+        threshold = increment
+        n_valid = torch.sum((values < threshold).type(torch.int32))
+        # rounded up point where we exeed 5% of the total points
+        five_percent = values.shape[0] // 20 + int((values.shape[0] % 20) > 0)
+        while n_valid <= five_percent:
+            threshold += increment
+            n_valid = torch.sum((values < threshold).type(torch.int32))
+        return valid_points[(values < threshold).squeeze()]
