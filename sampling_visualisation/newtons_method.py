@@ -14,9 +14,10 @@ class NewtonsMethod:
         assert x.shape[1] == self.points.shape[1]
         # df/df = 1, we want the plain gradient of the inputs
         x.requires_grad_()
-        means, variances = self.surrogate.mean_and_variance(x)
+        posterior = self.surrogate.posterior(x)
+        means = posterior.mean
         means.backward(torch.ones(means.shape), inputs=x)
-        return means.detach(), variances, x.grad
+        return means.detach(), posterior.variance, x.grad
     
     def step(self):
         # get y values and gradients at all points
@@ -61,13 +62,18 @@ class NewtonsMethod:
         numaric_points = self.points[~torch.any(self.points.isnan(), dim=1)]
         # select points that are inside the legal hypercube
         valid_points = numaric_points[~torch.any(torch.logical_or(numaric_points < self.lim[0], numaric_points > self.lim[1]), dim=1)]
+        # no valid points means we can end here
+        if valid_points.shape[0] == 0:
+            return valid_points
         # distance from 0
-        values = self.surrogate(valid_points) ** 2
+        values = self.surrogate.posterior(valid_points).mean ** 2
+        # scale increment with a common value (median)
+        increment *= torch.median(values)
         threshold = increment
         n_valid = torch.sum((values < threshold).type(torch.int32))
         # rounded up point where we exeed 5% of the total points
         five_percent = values.shape[0] // 20 + int((values.shape[0] % 20) > 0)
         while n_valid <= five_percent:
             threshold += increment
-            n_valid = torch.sum((values < threshold).type(torch.int32))
+            n_valid = torch.sum((values <= threshold).type(torch.int32))
         return valid_points[(values < threshold).squeeze()]
