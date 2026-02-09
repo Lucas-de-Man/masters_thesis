@@ -14,8 +14,7 @@ class Surrogate:
         self.n_constraints = y_points.shape[1] - 1
         self.x_points, self.y_points = x_points, y_points
         self.model = None
-        self.model, self.mll = self.update_model()
-        fit_gpytorch_mll(self.mll)
+        self.update_model()
         
     def update_model(self):
         assert self.x_points.shape[0] == self.y_points.shape[0]
@@ -32,14 +31,13 @@ class Surrogate:
         mll = SumMarginalLogLikelihood(model.likelihood, model)
         if self.model is not None:
             model.load_state_dict(self.model.state_dict())
-        return model, mll
+        fit_gpytorch_mll(mll)
+        self.model = model
 
     def add_observations(self, x, y):
         self.x_points = torch.cat((self.x_points, x), dim=0)
         self.y_points = torch.cat((self.y_points, y), dim=0)
-        print(self.y_points)
-        self.model, self.mll = self.update_model()
-        fit_gpytorch_mll(self.mll)
+        self.update_model()
 
     def mean_and_variance(self, x):
         posterior = self.model.posterior(x)
