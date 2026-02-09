@@ -6,7 +6,7 @@ class NewtonsMethod:
         It's able to aply newton's method to those points on the surrogate.
         The surrogate just needs to be a differentiable function taking and returning torch tensors.
     """
-    def __init__(self, surrogate, points = None, epsilon=1e-9, lim=(0, 1)):
+    def __init__(self, surrogate, points = None, epsilon=1e-6, lim=(0, 1)):
         self.surrogate, self.epsilon, self.lim = surrogate, epsilon, lim
         self.points = torch.empty((0, 1)) if points is None else points.detach().clone()
 
@@ -22,14 +22,10 @@ class NewtonsMethod:
     def step(self):
         # get y values and gradients at all points
         y, _, y_grad = self.val_gradient_at(self.points)
-        # Find the sign of all gradient values
-        sign_mask = ((y_grad > 0) * 2 - 1).type(y_grad.dtype)
-        # set the sign of epsilon to match the value it is added to
-        y_grad = y_grad + self.epsilon * sign_mask
-        # n is dimensionality of the inputs
-        n = self.points.shape[1]
-        # multi-dimensional newtons method using the moore penrose inverse of the gradient
-        self.points = self.points - torch.mul(torch.div(1, n * y_grad), y)
+        # compute magnitudes of gradients, adding epsilon to not divide by zero 
+        y_grad_mags = torch.sum(y_grad ** 2, dim=1, keepdim=True) + self.epsilon
+        # multi-dimensional newtons method using the moore penrose inverse of the gradient (v^-1 = 1/|v|^2 * v^T)
+        self.points = self.points - torch.mul(torch.div(1, y_grad_mags), y_grad) * y
     
     def take_n_steps(self, n):
         for _ in range(n):
@@ -57,7 +53,7 @@ class NewtonsMethod:
         magnitude = stds * torch.sqrt(variances) / (self.epsilon + torch.sqrt(torch.sum(grad ** 2, dim=1, keepdim=True)))
         return grad * magnitude
     
-    def get_edge_points(self, increment=0.01):
+    def get_edge_points(self, increment=0.01, scale_increment=False):
         # remove points wiht a nan value
         numaric_points = self.points[~torch.any(self.points.isnan(), dim=1)]
         # select points that are inside the legal hypercube
@@ -67,8 +63,9 @@ class NewtonsMethod:
             return valid_points
         # distance from 0
         values = self.surrogate.posterior(valid_points).mean ** 2
-        # scale increment with a common value (median)
-        increment *= torch.median(values)
+        # scale increment with a common value (median) if needed
+        if scale_increment:
+            increment *= torch.median(values)
         threshold = increment
         n_valid = torch.sum((values < threshold).type(torch.int32))
         # rounded up point where we exeed 5% of the total points
