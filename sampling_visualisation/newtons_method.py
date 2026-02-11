@@ -41,7 +41,7 @@ class NewtonsMethod:
         # divide by |grad|^2, as the rate of change of the mean affects change in edge likelihood
         # we assume the variance to remain constant here
         magnitude = stds * torch.sqrt(variances) / (self.epsilon + torch.sum(grad ** 2, dim=1, keepdim=True))
-        return grad * magnitude
+        return (grad * magnitude).detach()
     
     def noise_vector_normalised_grad(self, points = None, stds=1.96):
         # by default use the held points
@@ -51,7 +51,7 @@ class NewtonsMethod:
         _, variances, grad = self.val_gradient_at(points)
         # divide by |grad|, so we assume both the mean and variance to remain constant when computing the noise magnitude
         magnitude = stds * torch.sqrt(variances) / (self.epsilon + torch.sqrt(torch.sum(grad ** 2, dim=1, keepdim=True)))
-        return grad * magnitude
+        return (grad * magnitude).detach()
     
     def get_edge_points(self, increment=0.01, scale_increment=False):
         # remove points wiht a nan value
@@ -73,4 +73,4 @@ class NewtonsMethod:
         while n_valid <= five_percent:
             threshold += increment
             n_valid = torch.sum((values <= threshold).type(torch.int32))
-        return valid_points[(values < threshold).squeeze()]
+        return (valid_points[(values < threshold).squeeze()]).detach()
